@@ -44,8 +44,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ***
 
-## 第15案 - 婚姻平權
-先來看第15案的婚姻平權這次的連署情況吧。
+## 第14案 - 婚姻平權
+先來看第14案的婚姻平權這次的連署情況吧。
 
 ### 資料長怎樣？
 
@@ -261,13 +261,13 @@ kable(df) %>%
   kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
 ```
 
-然後計算可能在15案投下同意票的數量，做成一個長條圖，
+然後計算可能在 14 案投下同意票的數量，做成一個長條圖，
 
 ```{r, echo = FALSE}
 ggplot(df, aes(x = age, weight = total_vote)) +
   geom_bar(fill = "gold1", colour = "black", alpha = 0.5) +
   theme_bw() +
-  labs(title = "各年齡第15案同意數", x = "年齡分佈", y = "同意數（萬）") +
+  labs(title = "各年齡第14案同意數", x = "年齡分佈", y = "同意數（萬）") +
   theme(#plot.margin = margin(1.5, 1.3, 1.1, 1.3, "cm"), # graph margin
         axis.title.x = element_text(margin = unit(c(5, 0, 0, 0), "mm")), # x title margin
         axis.title.y = element_text(margin = unit(c(0, 5, 0, 0), "mm")), # y title margin
