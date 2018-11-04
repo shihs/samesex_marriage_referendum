@@ -1,0 +1,303 @@
+---
+title: "平權公投連署書統計視覺化"
+output: 
+  html_document:
+    toc: true
+    toc_float: TRUE
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+***
+
+## 前言
+
+### 「婚姻平權」與「性別平等」公投
+
+2018年年底大選將會有10個公投要一起舉行。
+
+其中，
+**第14案**（您是否同意，以民法婚姻章保障同性別二人建立婚姻關係？）與
+**第15案**（您是否同意，以「性別平等教育法」明定在國民教育各階段內實施性別平等教育，且內容應涵蓋情感教育、性教育、同志教育等課程？）
+在一個多月的時間裡便募集到了30多萬的連署書，接下來將與萌萌的公投進行正面對決。
+
+昨天看到了連署書來源的資料，所以就無聊想說看看會不會有什麼有趣的發現。
+
+最新消息請追蹤：[婚姻平權大平台-兩好三壞投出幸福未來](https://www.facebook.com/equallovetw/)
+
+### 全國性公民投票案意見發表會
+
+[第14案　全國性公民投票案意見發表會](https://www.youtube.com/watch?v=ABWFJ6bhAmo)
+<p>
+[第15案　全國性公民投票案意見發表會](https://www.youtube.com/watch?v=QWUujJA_1yI)
+
+***
+
+## 資料來源
+- [連署書統計表](https://docs.google.com/spreadsheets/d/1sv25aVgTpgAOtuKk44y3kCqpcyX0yLBE0cYxICFZCDE/edit?fbclid=IwAR1iLKk5y63RsGeqUhdSBVHYNOzwjDIFnKDnM9Lvlqh7tv-DgnU-98Wcf1Q#gid=1381679284)
+- [縣市人口年齡結構指標](https://www.ris.gov.tw/app/portal/346)
+- [鄉鎮市區界線(TWD97經緯度)](https://data.gov.tw/dataset/7441)
+
+***
+
+## 第15案 - 婚姻平權
+先來看第15案的婚姻平權這次的連署情況吧。
+
+### 資料長怎樣？
+
+```{r, echo = FALSE}
+library(knitr)
+library(kableExtra)
+library(openxlsx)
+# 婚姻平權
+marriage <- read.xlsx("平權公投連署書統計表 csv 版.xlsx", sheet = 1)
+# head(marriage)
+kable(marriage[1:10, ]) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+- 欄位名稱與說明
+```{r, echo = FALSE, results = "asis"}
+library(openxlsx)
+# 婚姻平權
+colnms <- read.xlsx("平權公投連署書統計表 csv 版.xlsx", sheet = 3)
+colnms <- colnms[8:13, ]
+names(colnms) <- c("欄位名稱", "說明")
+rownames(colnms) <- 1:nrow(colnms)
+kable(colnms) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+# colnms
+```
+
+***
+
+### 各縣市連署書回收狀況
+
+```{r, echo = FALSE, message=FALSE}
+library(plyr)
+library(dplyr)
+marriage <- marriage[, c(1, 2, 6)]
+names(marriage) <- c("city", "county", "total")
+marriage$city_county <- paste0(marriage$city, marriage$county)
+marriage_group <- marriage %>%
+                    group_by(city) %>%
+                    summarise(total = sum(total))
+```
+
+資料的單位是鄉鎮區，但如果以鄉鎮區來畫長條圖有點太過雜亂，所以這裡我以縣市為單位來看各縣市收集到的總數量。
+
+```{r, echo = FALSE}
+library(ggplot2)
+options(scipen = 999)
+ggplot(marriage_group, aes(x = city, weight = total)) +
+  geom_bar(fill = "gold1", colour = "black", alpha = 0.5) +
+  theme_bw() +
+  labs(title = "各縣市連署書數量", x = "縣市", y = "數量（份）") +
+  theme(#plot.margin = margin(1.5, 1.3, 1.1, 1.3, "cm"), # graph margin
+        axis.title.x = element_text(margin = unit(c(5, 0, 0, 0), "mm")), # x title margin
+        axis.title.y = element_text(margin = unit(c(0, 5, 0, 0), "mm")), # y title margin
+        axis.text = element_text(size = rel(0.8)),  # axis labels size
+        axis.title = element_text(size = rel(1.3), face = "bold"), # axis names size
+        plot.title = element_text(size = rel(1.6), face = "bold", hjust = 0.5, 
+                                  margin = unit(c(0, 0, 8, 0), "mm")),
+        text=element_text(family="Heiti TC Light"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+
+從上圖可以看出來，直轄市回收的連署書數量是比較高的，但當然不能不考量各地區18歲以上人口數量的差異，所以這裡我們再加上各縣市的人口數量資料看看。
+<p>
+將內政部的[縣市人口年齡結構指標](https://www.ris.gov.tw/app/portal/346)資料整理後，只留下有公投資格的18歲以上人口。
+
+```{r, echo = FALSE, message=FALSE}
+population <- read.xlsx("population.xlsx")
+population <- population[c(2:nrow(population)), c(1, 7:ncol(population))]
+names(population) <- c("city", "18~20歲", "18~20歲占比", "20歲以上", "20歲以上佔比")
+# head(population)
+kable(population[1:10, ]) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+```{r, echo = FALSE, messaige = FALSE, warning=FALSE}
+marriage_group <- join(marriage_group, population)
+marriage_group$vote_population <- marriage_group$`18~20歲` + marriage_group$`20歲以上`
+marriage_group$petition_ratio <- round(marriage_group$total*100/marriage_group$vote_population, 2)
+
+# barchar
+ggplot(marriage_group, aes(x = city, weight = petition_ratio)) +
+  geom_bar(fill = "gold1", colour = "black", alpha = 0.5) +
+  theme_bw() +
+  labs(title = "各縣市連署書佔18歲以上人口比例", x = "縣市", y = "比例（％）") +
+  theme(#plot.margin = margin(1.5, 1.3, 1.1, 1.3, "cm"), # graph margin
+        axis.title.x = element_text(margin = unit(c(5, 0, 0, 0), "mm")), # x title margin
+        axis.title.y = element_text(margin = unit(c(0, 5, 0, 0), "mm")), # y title margin
+        axis.text = element_text(size = rel(0.8)),  # axis labels size
+        axis.title = element_text(size = rel(1.3), face = "bold"), # axis names size
+        plot.title = element_text(size = rel(1.6), face = "bold", hjust = 0.5, 
+                                  margin = unit(c(0, 0, 8, 0), "mm")),
+        text=element_text(family="Heiti TC Light"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+根據上圖會發現，台北市的所遞出的連署書不只是數量上第二多，人口比例上也是最高的，約有 5%，接著再來是新北市的 4.3% 左右，而宜蘭縣、基隆市與嘉義市的回收率其實是高於其他直轄市的。除了南投縣連署書的比例較少約為 2% 外，大多數的縣市大約都是落在 2.5%~3.5% 左右。
+
+所以，雖然直轄市的連署數量是最多的，但其實並非是最多比例的人口參與。反而是像宜蘭縣、基隆市和嘉義市的人參與率不低，且令我意外的是，人口不多的連江縣和金門縣的連署人數占比也並不算低。但因為連署畢竟還是看數量，所以直轄市所有人的參與還是相當重要啊。
+
+***
+
+### 連署書回收地理分布
+看完了無聊的長條圖，現在來看看在地理上的分佈是什麼樣吧。
+
+根據原資料提供的以鄉鎮區為單位的數量分布會是什麼樣子呢？（因為各區人口差異極大，所以我用了 scale 調整數據範圍。）
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# 地圖
+# https://data.gov.tw/dataset/7441
+library(maptools)
+library(ggplot2)
+library(mapproj)
+taiwan_map <- readShapeSpatial("mapdata201805311056/TOWN_MOI_1070516.shp")  # maptools
+taiwan <- fortify(taiwan_map, region = "TOWNCODE")  # ggplot2
+
+county_code <- read.csv("county_code.csv", header = FALSE)
+county_code <- county_code[, c("V2", "V3", "V4", "V7")]
+names(county_code) <- c("id", "city", "county", "code_short")
+county_code$id <- formatC(county_code$id, width = 8, flag = 0)
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning=FALSE}
+marriage <- join(marriage, county_code)
+marriage_map <- join(taiwan, marriage)
+
+marriage_map$total_scale <- scale(marriage_map$total)
+library(ggthemes)
+ggplot() +
+  geom_polygon(data = marriage_map,
+               aes(x = long, y = lat, group = group, fill = total_scale), color = "black", size = 0.25) +
+  coord_map() +
+  theme_map() +
+  scale_fill_continuous(low="white", high="red", na.value="transparent", 
+                        guide="colorbar")
+```
+
+可以發現，主要還是集中在西半部為主，且北部為最主要的數量來源。當然，因為西半部人口本來就比較密集，所以這樣的結果其實也並不意外。
+
+那我們看一下，前幾名是哪些鄉鎮區包辦呢？
+
+```{r, echo = FALSE}
+amount_order <- head(marriage[order(marriage$total, decreasing = TRUE), c("city", "county", "total")], 10)
+kable(amount_order) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = F)
+```
+
+板橋區總共回收了兩萬兩千多張的連署書，且整整比第二名的三重區多了七千張！
+
+但因為沒有鄉鎮區的人口資料，所以也不確定是不是因為這些地區人口數本來就相對較高。不過可以確定的是，這些地區的貢獻絕對佔了非常大的功勞。
+
+以縣市為單位來看，
+
+```{r, echo = FALSE, message = FALSE}
+taiwan_city <- fortify(taiwan_map, region = "COUNTYCODE")  # ggplot2
+names(taiwan_city)[6] <- "code_short"
+
+marriage_group <- marriage %>%
+  select(city, total, code_short) %>%
+  group_by(city, code_short) %>%
+  summarise(total = sum(total))
+
+marriage_group <- data.frame(marriage_group)
+marriage_group <- join(marriage_group, taiwan_city)
+
+# marriage_group$total_scale <- scale(marriage_group$total)
+ggplot() +
+  geom_polygon(data = marriage_group,
+               aes(x = long, y = lat, group = group, fill = total), color = "black", size = 0.25) +
+  coord_map() +
+  theme_map() +
+  scale_fill_continuous(low="white", high="red", na.value="transparent", 
+                        guide="colorbar")
+```
+
+```{r, echo = FALSE, message=FALSE, eval=FALSE}
+marriage_group <- join(marriage_group, population)
+marriage_group$vote_population <- marriage_group$`18~20歲` + marriage_group$`20歲以上`
+marriage_group$petition_ratio <- round(marriage_group$total*100/marriage_group$vote_population, 2)
+
+ggplot() +
+  geom_polygon(data = marriage_group,
+               aes(x = long, y = lat, group = group, fill = petition_ratio), 
+               color = "black", size = 0.25) +
+  coord_map() +
+  theme_map() +
+  scale_fill_continuous(low="white", high="red", na.value="transparent", 
+                        guide="colorbar")
+
+```
+
+***
+
+### 其他資料
+
+這裡有找到一份[2016年總統選舉的性別與年齡分佈](https://www.cec.gov.tw/upload/file/2017-01-17/6e4bfa0e-1db0-4e09-8f6f-4277ede8fd47/b13e42a37f1e0a43a453e6b79b21ed90.pdf)，可以看得出來 55 歲到 74 歲的投票率還是比較高的，約為 75% - 80%。20 歲到 23 歲算是年輕世代較多投票的年齡分佈，而 25 歲到 38 歲投票的比率約為 55% - 60% 上下。
+
+再與另外一份分為[中生代與年輕世代贊成同性婚姻的統計](https://talkecon.com/homosexual_social_change/)來對照，年輕世代 （1971-1990）的支持率在 2015 年為 75% ，而中年世代（1950-1970）為 44%，換算一下年齡，所謂的年輕世代是 28 歲到 47 歲，中年世代為 48 歲到 68 歲。但
+年輕世代的年齡我個人認為範圍有點太大了且數字好像有點太樂觀（？），所以再根據這篇[報導](http://www.peoplenews.tw/news/ce4b2e4a-83df-4ae1-aa1f-d0174dee76f4)提到「47.8%民眾支持，41.7%不支持」以及「年齡越輕越支持婚姻平權，20-29歲71.2％支持度最高」，所以我把整個 20 歲 到 29 歲估計為 71% ，而 30-39 歲估計為 65%， 40-49 歲為 50％，50-60 歲以上為 40%，60 歲以上則為 25%。（我想要用最差的數字來計算）
+另外，這邊找到一份 [2017 年的人口結構金字塔](http://taisoci.blogspot.com/2017/05/20173.html)。
+
+我把上面的數字稍微做個很粗略的整理成表格，
+
+```{r, echo = FALSE}
+df <- data.frame(age = c("20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-80"),
+           agree_samesex_marriage = c(0.7, 0.7, 0.65, 0.65, 0.5, 0.5, 0.4, 0.4, 0.25, 0.25, 0.25, 0.25), 
+           vote_rate = c(0.6, 0.58, 0.58, 0.58, 0.63, 0.65, 0.68, 0.7, 0.75, 0.78, 0.78, 0.68),
+           population = c(160, 160, 175, 200, 180, 180, 185, 175, 155, 115, 66, 58))
+df$total_vote <- df$population*df$vote_rate*df$agree_samesex_marriage
+kable(df) %>%
+  kable_styling(bootstrap_options = "striped", full_width = F, position = "left")
+```
+
+然後計算可能在15案投下同意票的數量，做成一個長條圖，
+
+```{r, echo = FALSE}
+ggplot(df, aes(x = age, weight = total_vote)) +
+  geom_bar(fill = "gold1", colour = "black", alpha = 0.5) +
+  theme_bw() +
+  labs(title = "各年齡第15案同意數", x = "年齡分佈", y = "同意數（萬）") +
+  theme(#plot.margin = margin(1.5, 1.3, 1.1, 1.3, "cm"), # graph margin
+        axis.title.x = element_text(margin = unit(c(5, 0, 0, 0), "mm")), # x title margin
+        axis.title.y = element_text(margin = unit(c(0, 5, 0, 0), "mm")), # y title margin
+        axis.text = element_text(size = rel(1.1)),  # axis labels size
+        axis.title = element_text(size = rel(1.3), face = "bold"), # axis names size
+        plot.title = element_text(size = rel(1.6), face = "bold", hjust = 0.5, 
+                                  margin = unit(c(0, 0, 8, 0), "mm")),
+        text=element_text(family="Heiti TC Light"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text(aes(y = total_vote, label=total_vote), position=position_dodge(width=0.9), vjust=-0.25) +
+  annotate("text", x = 11.3, y = 73, label = paste0("Total: ", sum(df$total_vote)))
+```
+
+以這樣很粗很粗的推估，大約有 562 萬人會在 15 案投下同意票，超過了 500 萬的公投門檻！不過這些數字非常不精準，也只是我很隨意的粗估，且地區性肯定差異非常大，根據這次連署書的來源就可以知道，所以平均數來估計全台灣的準確性肯定會很不好。不過還是樂觀的希望這次的公投可以順利過關，讓萌萌們不要再一直出來鬧了。
+
+***
+
+## 結論
+
+### 還少了什麼？
+
+這是我第一次試著將時事與 open data 做一些結合，但沒想到找資料與實作上比我預計中花費更多的時間，因為時間的考量下目前就先暫時做到這裏，其實還有很多想深入看的資料。
+
+1. 如果有鄉鎮區的人口各年齡數量就可以更細的往鄉鎮區看。
+2. 如果有連署書的年齡分佈，可以再去劃分年齡的差異。
+3. 如果有歷年各年齡投票率的數據，再加上連署書年齡的分佈與地區人口分佈或許可以真的推測出這次公投是否可以有機會過。
+
+***
+
+## 各種網路資源參考
+- http://www.bioinfo-scrounger.com/archives/614
+- https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+- https://ariheart2011.wordpress.com/2017/05/10/深入淺出繪製統計地圖-4-r/
